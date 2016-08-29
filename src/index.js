@@ -31,7 +31,7 @@ function rollupVinylStream(options = {}) {
           ...vinylOptions,
           path:      path.resolve(dest),
           contents:  new Buffer(code),
-          sourceMap: map,
+          sourceMap: {...map, file: dest},
         }))
         .forEach(file => stream.push(file))
       ;
