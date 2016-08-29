@@ -1,0 +1,39 @@
+{
+  "name": "rollup-vinyl-stream",
+  "version": "1.0.0",
+  "description": "Create a vinyl stream from a Rollup bundle.",
+  "main": "lib/index.js",
+  "files": [
+    "lib/"
+  ],
+  "scripts": {
+    "build": "node ./build.js",
+    "test": "mocha index.spec.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AdamHerrmann/rollup-vinyl-stream.git"
+  },
+  "keywords": [
+    "vinyl",
+    "gulp",
+    "rollup"
+  ],
+  "author": {
+    "name": "Adam Herrrmann",
+    "email": "Adam.Herrmann@gmail.com",
+    "url": "https://github.com/AdamHerrmann"
+  },
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/AdamHerrmann/rollup-vinyl-stream/issues"
+  },
+  "homepage": "https://github.com/AdamHerrmann/rollup-vinyl-stream#readme",
+  "dependencies": {
+    "rollup": "^0.34.10",
+    "vinyl": "^1.2.0"
+  },
+  "devDependencies": {
+    "buble": "^0.13.1"
+  }
+}
