@@ -16,7 +16,7 @@ module.exports = function rollupVinylStream(_opts = {}) {
       .then(streamEmit('bundle'))
       .then(bundle => {
         const bundleTarget = createTargetBundler(bundle, opts, vinylOpts);
-        stream.push(...(opts.targets || [{}]).map(bundleTarget));
+        (opts.targets || [{}]).map(bundleTarget).forEach(file => stream.push(file));
         stream.push(null);
       })
     )
