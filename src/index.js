@@ -1,64 +1,86 @@
-  'use strict';
+'use strict';
 
-const streamKeys        = ['rollup', 'vinyl', 'config'];
-const dependencyWarning = message => /Treating .+ as external dependency/.test(message);
+const streamKeys = ['rollup', 'vinyl', 'config'];
 
-module.exports = rollupVinylStream;
+module.exports = function rollupVinylStream(_opts = {}) {
+  const {Readable} = require('stream');
+  const stream     = new Readable({objectMode: true, read: () => {}});
+  const streamEmit = name => obj => { stream.emit(name, obj); return obj; };
+  const rollup     = _opts.rollup || require('rollup');
+  const vinylOpts  = _opts.vinyl || {};
+  const rollupOpts = loadOptions(_opts, rollup, streamEmit);
 
-function rollupVinylStream(options = {}) {
-  const Readable      = require('stream').Readable;
-  const path          = require('path');
-  const Vinyl         = require('vinyl');
-  const rollup        = options.rollup || require('rollup');
-  const vinylOptions  = options.vinyl || {};
-  const config        = options.config && path.resolve(options.config);
-  const rollupOptions = config ? loadConfigOptions(rollup, config) : Promise.resolve({});
-  const stream        = new Readable({objectMode: true, read: () => {}});
-
-  rollupOptions
-    .then(rollupOptions => Object
-      .keys(options)
-      .filter(key => !streamKeys.includes(key))
-      .reduce((rollupOptions, key) => rollupOptions[key] = options[key], rollupOptions)
+  rollupOpts
+    .then(opts => rollup
+      .rollup(opts)
+      .then(streamEmit('bundle'))
+      .then(bundle => {
+        const bundleTarget = createTargetBundler(bundle, opts, vinylOpts);
+        stream.push(...(opts.targets || [{}]).map(bundleTarget));
+        stream.push(null);
+      })
     )
-    .then(options => rollup.rollup(options).then(bundle => ({options, bundle})))
-    .then(({options, bundle}) => {
-      stream.emit('options', {...options, cache: bundle});
-
-      (options.targets.map(target => ({...options, ...target})) || [options])
-        .map(target => ({target, result: bundle.generate(target)}))
-        .map(({target: {dest}, result: {code, map}}) => new Vinyl({
-          ...vinylOptions,
-          path:      path.resolve(dest),
-          contents:  new Buffer(code),
-          sourceMap: {...map, file: dest},
-        }))
-        .forEach(file => stream.push(file))
-      ;
-
-      stream.push(null);
-    })
-    .catch(error => stream.emit('error', error))
+    .catch(streamEmit('error'))
   ;
 
   return stream;
 }
 
-function loadConfigOptions(rollup, config) {
+function createTargetBundler(bundle, opts, vinylOpts) {
+  const Vinyl = require('vinyl');
+  const path  = require('path');
+
+  return (target) => {
+    const {code, map} = bundle.generate({...opts, ...target});
+    const file        = new Vinyl({
+      ...vinylOpts,
+      path:      path.resolve(target.dest),
+      contents:  new Buffer(code),
+    });
+
+    if (map) {
+      file.sourceMap      = map;
+      file.sourceMap.file = target.dest
+    }
+
+    return file;
+  };
+}
+
+function loadOptions(_opts, rollup, streamEmit) {
+  const path   = require('path');
+  const config = _opts.config ? loadRollupConfig(path.resolve(_opts.config), rollup, streamEmit) : Promise.resolve({});
+
+  return config.then(config => {
+   Object
+      .keys(_opts)
+      .filter(key => !streamKeys.includes(key))
+      .forEach(key => config[key] = overrides[key])
+    ;
+    return config;
+  });
+}
+
+function loadRollupConfig(entry, rollup, streamEmit) {
+  const ignorable = /Treating .+ as external dependency/;
+  const onwarn    = message => ignorable.test(message) || console.error(message);
+
   return rollup
-    .rollup({
-      entry:  config,
-      onwarn: (message) => dependencyWarning(message) || console.error(message),
-    })
-    .then((bundle) => {
-      const loader = require.extensions['.js'];
-
-      require.extensions['.js'] = (module, filename) => {
-        require.extensions['.js'] = loader;
-        module._compile(bundle.generate({format: 'cjs'}).code, filename)
-      };
-
-      return require(config);
-    })
+    .rollup({entry, onwarn})
+    .then(bundle => requireRollupBundle(bundle, entry))
+    .then(streamEmit('config'))
+    .then(config => ({...config}))
   ;
+}
+
+function requireRollupBundle(bundle, entry) {
+  const previousLoader = require.extensions['.js'];
+
+  require.extensions['.js'] = (module, filename) => {
+    require.extensions['.js'] = previousLoader;
+    module._compile(bundle.generate({format: 'cjs'}).code, filename);
+  }
+
+  try     { return require(entry); }
+  finally { require.extensions['.js'] = previousLoader; }
 }
