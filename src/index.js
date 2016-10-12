@@ -2,13 +2,13 @@
 
 const streamKeys = ['rollup', 'vinyl', 'config'];
 
-module.exports = function rollupVinylStream(_opts = {}) {
+module.exports = function rollupVinylStream(options = {}) {
   const {Readable} = require('stream');
   const stream     = new Readable({objectMode: true, read: () => {}});
   const streamEmit = name => obj => { stream.emit(name, obj); return obj; };
-  const rollup     = _opts.rollup || require('rollup');
-  const vinylOpts  = _opts.vinyl || {};
-  const rollupOpts = loadOptions(_opts, rollup, streamEmit);
+  const rollup     = options.rollup || require('rollup');
+  const vinylOpts  = options.vinyl || {};
+  const rollupOpts = loadOptions(options, rollup, streamEmit);
 
   rollupOpts
     .then(opts => rollup
@@ -47,15 +47,15 @@ function createTargetBundler(bundle, opts, vinylOpts) {
   };
 }
 
-function loadOptions(_opts, rollup, streamEmit) {
+function loadOptions(options, rollup, streamEmit) {
   const path   = require('path');
-  const config = _opts.config ? loadRollupConfig(path.resolve(_opts.config), rollup, streamEmit) : Promise.resolve({});
+  const config = options.config ? loadRollupConfig(path.resolve(options.config), rollup, streamEmit) : Promise.resolve({});
 
   return config.then(config => {
    Object
-      .keys(_opts)
+      .keys(options)
       .filter(key => !streamKeys.includes(key))
-      .forEach(key => config[key] = overrides[key])
+      .forEach(key => config[key] = options[key])
     ;
     return config;
   });
