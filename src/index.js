@@ -62,8 +62,8 @@ function loadOptions(options, rollup, streamEmit) {
 }
 
 function loadRollupConfig(entry, rollup, streamEmit) {
-  const ignorable = /Treating .+ as external dependency/;
-  const onwarn    = message => ignorable.test(message) || console.error(message);
+  const ignorable = error => error.code === 'UNRESOLVED_IMPORT';
+  const onwarn    = error => ignorable(error) || console.error(error.toString());
 
   return rollup
     .rollup({entry, onwarn})
