@@ -54,7 +54,7 @@ function loadOptions(options, rollup, streamEmit) {
   return config.then(config => {
    Object
       .keys(options)
-      .filter(key => !streamKeys.includes(key))
+      .filter(key => -1 === streamKeys.indexOf(key))
       .forEach(key => config[key] = options[key])
     ;
     return config;
