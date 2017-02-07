@@ -1,6 +1,6 @@
 {
   "name": "rollup-vinyl-stream",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Create a vinyl stream from a Rollup bundle.",
   "main": "lib/index.js",
   "files": [
